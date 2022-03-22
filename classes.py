@@ -1,94 +1,126 @@
-from stats_commands_attacks import *
+import random
+import copy
+
+from termcolor import cprint
+
+from helpers import print_intro, print_end
 
 
-class Battle:
-
-    def __init__(self, pokemon1, pokemon2):
-        self.pokemon1 = pokemon1
-        self.pokemon2 = pokemon2
-        self.actual_turn = 0
-
-    def is_finished(self):
-        finished = self.pokemon1.current_hp <= 0 or self.pokemon2.current_hp <= 0
-        if finished:
-            self.print_winner()
-        return finished
-
-    def print_winner(self):
-        if self.pokemon1.current_hp <= 0 < self.pokemon2.current_hp:
-                print(self.pokemon2.name + " won in " + str(self.actual_turn)+" turns!!")
-        elif self.pokemon2.current_hp <= 0 < self.pokemon1.current_hp:
-                print(self.pokemon1.name + " won in " + str(self.actual_turn)+" turns!!")
-        else:
-            print("DOUBLE KO!")
-
-    def execute_turn(self, turn):
-        # Logic to execute a turn inside a battle
-        command1 = turn.command1
-        command2 = turn.command2
-        attack1 = None
-        attack2 = None
-        if DO_ATTACK in command1.action.keys():
-            attack1 = self.pokemon1.attacks[command1.action[DO_ATTACK]]
-        if DO_ATTACK in command2.action.keys():
-            attack2 = self.pokemon2.attacks[command2.action[DO_ATTACK]]
-
-        # Execute attacks
-        self.pokemon2.current_hp -= attack1.power
-        self.pokemon1.current_hp -= attack2.power
-        self.actual_turn += 1
-
-    def print_current_status(self):
-        print(self.pokemon1.name + " has " + str(self.pokemon1.current_hp) + " left!")
-        print(self.pokemon2.name + " has " + str(self.pokemon2.current_hp) + " left!")
-
-
-class Player:
-    
-    def __init__(self, name, pokemon_list):
+class TipoAtaque():
+    def __init__(self, name, counters):
         self.name = name
-        self.pokemon_list
+        self.counters = counters
+      
+  
+class Ataque():
+    def __init__(self, name, damage, tipo):
+        self.name = name
+        self.damage = damage
+        self.tipo = tipo
+        
+        
+class Pokemon():
+    def __init__(self, name, tipo, salud, ataques):
+        self.name = name
+        self.tipo = tipo
+        self.salud = salud
+        self.ataques = ataques
+        
+    def recibir_damage(self, damage):
+        self.salud = self.salud - damage
+
+
+class Player():
+    def __init__(self, name, lista_pokes):
+        self.name = name
+        self.main_poke = 0
+        self.lista_pokes = lista_pokes
+        self.money = 0
+        self.pokeballs = 0
+        self.potions_cure = 0
+        self.potions_damage = 0
+        
+    def get_num_captured_pokes(self):
+        return len(self.lista_pokes)
+    
+    def give_reward(self):
+        award = self.money * 0.1
+        self.money -= award
+        return award
+    
+    def recieve_reward(self, amount):
+        self.money += amount
+    
+    def number_of_pokemons_alive(self):
+        num_pokemons_alive = 0
+        for poke in self.lista_pokes:
+            if poke.salud > 0:
+                num_pokemons_alive += 1
+        return num_pokemons_alive
+    
+    def change_main_poke(self, index_new_main_poke):
+        self.main_poke = index_new_main_poke
+        
+    def add_new_poke(self, poke):
+        self.lista_pokes.append(poke)
+        
+    def lose_main_poke(self):
+        main_poke = copy.deepcopy(self.lista_pokes[self.main_poke])
+        main_poke_name = main_poke.name
+        self.lista_pokes = list(filter(lambda poke: poke.name != main_poke_name, self.lista_pokes))
+        return main_poke
+        
+    def main_poke_recieves_damage(self, damage_amount):
+        salud_main_poke = self.lista_pokes[self.main_poke].salud
+        self.lista_pokes[self.main_poke].salud = salud_main_poke - damage_amount
+        
+    def add_pokeballs(self, amount):
+        self.pokeballs += amount
+        
+    def damage_of_main_poke(self):
+        main_poke = self.lista_pokes[self.main_poke]
+        print('Select the ID attack of the main pokemon:')
+        for index, attack in enumerate(main_poke.ataques):
+            print(f'{index}: {attack.name}')
+        id_attack = int(input('Type an ID attack: '))
+        attack_main_poke = main_poke.ataques[id_attack]
+        attack_main_poke_damage = attack_main_poke.damage
+        return attack_main_poke_damage
+    
+    def heal_main_poke(self):
+        main_poke = self.lista_pokes[self.main_poke]
+        if self.potions_cure > 0:
+            main_poke.salud += 100
+            self.potions_cure -= 1
         
 
-
-class Pokemon:
-
-    def __init__(self, name, type1, type2, health):
-        self.type2 = type2
-        self.type1 = type1
-        self.name = name
-        self.health = health
-        self.attacks = []
-        self.stats = {}
-        self.current_status = 0
-        self.current_hp = health
-       
-    
-    
-
-
-class Attack:
-
-    def __init__(self, name, t, category, power, accuracy, pp):
-        self.name = name
-        self.type = t
-        self.category = category
-        self.pp = pp
-        self.power = power
-        self.accuracy = accuracy
-
-
-class Turn:
-
+class Grid():
     def __init__(self):
-        self.command1 = None
-        self.command2 = None
-
-    def can_start(self):
-        return self.command1 is not None and self.command2 is not None
-
-
-class Command:
-
-    def __init__(self, action):
-        self.action = action
+        self.map = None
+        
+    def build_map(self, size):
+        rows = []
+        for _ in range(size):
+            columns = []
+            for _ in range(size):
+               value = random.randint(0, 4)
+               columns.append(value)
+            rows.append(columns)
+        self.map = rows
+        
+    def paint_map(self, player_position):    
+        print_intro(self.map)
+        
+        for i in range(len(self.map)):
+            for j in range(len(self.map)):
+                if player_position[0] == i and player_position[1] == j:
+                    print('\U0001F9B9  ', end = '')
+                elif self.map[i][j] == 0 or self.map[i][j] == 1 or self.map[i][j] == 2:
+                    print('\U0001F335  ', end = '')
+                elif self.map[i][j] == 3:
+                    cprint('\U0001F47E  ', end = '')
+                elif self.map[i][j] == 4:
+                    cprint('\U0001F93A  ', end = '')
+            print('\n')
+            
+        print_end(self.map)
